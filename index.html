@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+
+<html>
+    <script>
+        var leaders = [
+            
+        ];
+    </script>
+    <head>
+        <meta charset="utf-8">
+        <title>Bottle Flip</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+        <style>
+            canvas {
+                position: absolute;
+                box-shadow: 0 3px 10px lightgrey;
+                border-radius: 5px;
+                outline: none;
+                
+            }
+            
+            body {
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+        <script class="pjs-src" id="pjs" type="data">try{
+
+var WIDTH = 600;
+var HEIGHT = 600;
+frameRate(60);
+noStroke();
+strokeCap(SQUARE);
+textAlign(LEFT, TOP);
+textFont(createFont("Montserrat"));
+
+var Engine = Matter.Engine,
+    Bodies = Matter.Bodies,
+    Composite = Matter.Composite,
+    Move = Matter.Body,
+    collides = Matter.Collision.collides;
+
+var scene = "menu";
+var currentLevel = 0;
+var levels = [
+    [
+        [110, 350],
+        { type: "grass", x: 300, y: 590, w: 600, h: 30},
+        { type: "target", x: 375, y: 580}   
+    ],
+    [
+        [210, 350],
+        { type: "grass", x: 300, y: 590, w: 600, h: 30},
+        { type: "target", x: 375, y: 580},
+        { type: "wood", x: 410, y: 450, w: 20, h: 200, },
+        { type: "wood", x: 270, y: 460, w: 80, h: 20, }
+    ],
+    [
+        [200, 200],
+        { type: "grass", x: 300, y: 590, w: 620, h: 80},
+        { type: "target", x: 375, y: 477, move:function(body, counter){
+             Move.setPosition(body, {x: 300 + sin(counter*0.5)*200, y: 500});
+        }},
+        { type: "wood", x: 375, y: 477, w: 15, h: 50, move:function(body, counter){
+             Move.setPosition(body, {x: 255 + sin(counter*0.5)*200, y: 470});
+        }},
+        { type: "wood", x: 375, y: 477, w: 15, h: 50, move:function(body, counter){
+             Move.setPosition(body, {x: 345 + sin(counter*0.5)*200, y: 470});
+        }},
+    ],
+    [
+        [150, 300],
+        { type: "grass", x: 300, y: 590, w: 600, h: 30},
+        { type: "target", x: 375, y: 580},
+        { type: "wood", x: 410, y: 450, w: 20, h: 200, },
+        { type: "wood", x: 270, y: 460, w: 120, h: 20, a: -30 },
+        { type: "wood", x: 228, y: 360, w: 20, h: 150, },
+    ],
+    [
+        [120, 200],
+        { type: "grass", x: 300, y: 590, w: 600, h: 30},
+        { type: "target", x: 300, y: 580},
+        { type: "wood", x: 400, y: 450, w: 120, h: 20, a: 45},
+        { type: "wood", x: 200, y: 450, w: 120, h: 20, a: -45 },
+        { type: "wood", x: 160, y: 360, w: 20, h: 100, a: 0 },
+        { type: "wood", x: 440, y: 360, w: 20, h: 100, a: 0 },
+        { type: "wood", x: 300, y: 340, w: 20, h: 250, move: function(body){
+            Move.rotate(body, 0.01);
+        }},
+        { type: "wood", x: 300, y: 340, w: 20, h: 250, a: 90, move: function(body){
+            Move.rotate(body, 0.01);
+        }},
+    ],
+    [
+        [150, 350],
+        { type: "grass", x: 300, y: 590, w: 600, h: 30},
+        { type: "target", x: 450, y: 150},
+        { type: "wood", x: 390, y: 292, w: 20, h: 300, },
+        { type: "wood", x: 330, y: 0, w: 150, h: 20, a: 0, friction: 0.8, move: function(body){
+            Move.setPosition(body, {x: 305, y: 280+constrain(sin(frameCount*0.5)*350, -128, 150)})
+        }},
+        { type: "wood", x: 330, y: 0, w: 20, h: 80, a: 0, move: function(body){
+            Move.setPosition(body, {x: 290+constrain(sin(frameCount*0.5 + 90) * 350, -100, 100), y: 103})
+        }}
+    ],
+];
+var shake = 0;
+var scoreModifier = {
+    color: [255, 255, 255],
+    scale: 1.5,
+    run: function(){
+        this.color[0] = min(this.color[0] + 5, 255);
+        this.color[1] = min(this.color[1] + 5, 255);
+        this.color[2] = min(this.color[2] + 5, 255);
+        this.scale = lerp(this.scale, 1, 0.3);
+        
+        textAlign(CENTER, CENTER);
+        pushMatrix();
+        translate(480, 50);
+        scale(this.scale);
+        fill(this.color[0], this.color[1], this.color[2]);
+        text("Score: "+score, 0, 0);
+        popMatrix();
+        textAlign(LEFT, TOP);
+    },
+    decrease: function(n){
+        score -= n;
+        this.color[1] = this.color[2] = 50;
+        this.scale = 1.5;
+        shake += 5;
+    },
+    increase: function(n){
+        score += n;
+        this.color[0] = this.color[2] = 50;
+        this.scale = 1.5;
+        shake += 5;
+    }
+};
+
+var mouse = "";
+var released = false;
+mouseReleased = function(){
+    clicked = true;
+}
+var debug = !true;
+var input = {};
+var keyUp = false;
+ keyPressed = function(){
+    input[keyCode] = input[key.toString().toLowerCase()] = true;  
+}
+keyReleased = function(){
+    delete input[keyCode];
+    delete input[key.toString().toLowerCase()];  
+    keyUp = true;
+}
+var score = 0;
+
+
+var transition = {
+    running: false,
+    position: -HEIGHT,
+    stage: 0,
+    to: "menu",
+    called: false,
+    start: function(to){
+        this.to = to;
+        this.stage = 0;
+        this.running = true;
+        this.called = false;
+    },
+    run: function(){
+        if(this.running){
+            fill(255);
+            rect(0, this.position, WIDTH, HEIGHT);
+            
+            if(abs(this.position) < 0.1){
+                this.stage = 1;
+            }else if(HEIGHT-this.position < 2){
+                this.stage = 2;
+            }
+            
+            if(this.stage <= 0){
+                this.position = lerp(this.position, 0, 0.25);
+            }else if(this.stage <= 1){
+                this.position = lerp(this.position, HEIGHT, 0.5);
+                if(!this.called){
+                    
+                    if(typeof(this.to) === typeof("")){
+                        scene = this.to;
+                    }else{
+                        this.to();
+                    }
+                    this.called = true;
+                }
+            }else if(this.stage <= 2){
+                this.running = false;
+                this.position = -HEIGHT;
+            }
+        }
+    }
+};  
+
+// create an engine
+var MouseX = 0;
+var MouseY = 0;
+var engine = Engine.create();
+var clicked = false;
+var objects = [];
+var particles = [];
+var bottle;
+var clouds = (function(){
+    var arr = [];
+    for(var i = 0; i < 5; i++){
+        arr.push([random(-100, WIDTH), random(80, 500), random(40, 60), random(0.1, 0.8)]);
+    }
+    return arr;
+})();
+var confeti = {
+    squares: [],
+    run: function(){
+        for(var i = this.squares.length-1; i >= 0; --i){
+            fill(this.squares[i].clr);
+            pushMatrix();
+            translate(this.squares[i].x, this.squares[i].y);
+            rotate(this.squares[i].r + this.squares[i].y);
+            rect(-this.squares[i].s/2, -this.squares[i].s/2, this.squares[i].s, this.squares[i].s);
+            popMatrix();
+            
+            this.squares[i].x += this.squares[i].xVel;
+            this.squares[i].y += this.squares[i].yVel;
+            this.squares[i].yVel += 0.5;
+            
+            if(this.squares[i].y > HEIGHT+20){
+                this.squares.splice(i, 1);
+                continue;
+            }
+        }
+    },
+    burst: function(){
+        for(var i = 0; i < 40; i++){
+            this.squares.push({
+                x: WIDTH/2 + random(-50, 50),
+                y: HEIGHT+10,
+                r: random(360),
+                xVel: random(-5, 5),
+                yVel: random(-10, -25),
+                s: random(8, 15),
+                clr: color(random(150, 255), random(150, 255), random(150, 255)),
+            });
+        }
+    },
+};
+
+
+function loadLevel(n, player){
+    var x = levels[n][0][0];
+    var y = levels[n][0][1];
+    player.resetPosition(x, y);
+    particles.length = 0;
+    
+    for(var i = 0; i < objects.length; i++){
+        Composite.remove(engine.world, objects[i].body);
+    }
+    objects.length = 0;
+    
+    for(var i = 1; i < levels[n].length; i++){
+        objects.push(new WorldObject(levels[n][i]));
+    }
+}
+
+function cloud(x, y, s){
+    fill(255);
+    arc(x, y, s, s, -179, 0);
+    arc(x-(s/1.5), y, s/1.5, s/1.5, -179, 0);
+    arc(x+(s/1.5), y, s/1.6, s/1.6, -179, 0);
+};
+function drawClouds(){
+    for(var i = clouds.length-1; i >= 0; --i){
+        cloud(clouds[i][0], clouds[i][1], clouds[i][2]);
+        if(clouds[i][0] > WIDTH+100){
+            clouds[i][0] =-100;
+            clouds[i][1] = random(80, 500);
+        }
+        clouds[i][0] += clouds[i][3];
+    }
+}
+
+function drawTarget(){
+    
+    fill(100);
+    rect(-53, -8, 106, 16,8);
+    
+    
+    fill(255, 100, 100);
+    rect(-50, -5, 100, 10, 5);
+    
+    fill(255);
+    rect(-35, -5, 70, 6, 0, 0, 5, 5);
+    
+    
+    fill(255, 100, 100);
+    rect(-20, -5, 40, 3, 0, 0, 5, 5);
+    
+}
+function drawGrass(w, h){
+    fill(40, 133, 90);
+    rect(-w/2, -h/2, w, h);
+    
+    fill(50, 150, 100);
+    rect(-w/2, -h/2, w, 5);
+    for(var i = -w/2; i < w/2; i += 30){
+        triangle(i, -h/2 + 5, i+30, -h/2 + 5, i+15, -5);
+    }
+}
+function clearBottle(x, y, r, yShift){
+    pushMatrix();
+    translate(x, y);
+    rotate(r);
+    translate(0, yShift);
+    fill(100);
+    arc(0, 2, 42, 42, -180, 0);
+    rect(-13, -28, 26, 14, 5);
+    
+    for(var i = 0; i < 4; i ++){
+        fill(100);
+        rect(-23, i*20, 46, 23, 7);
+        
+        fill(216, 230, 228);
+        rect(-20, i*20, 40, 20, 5);
+        
+        fill(235, 245, 244);
+        rect(-17, i*20, 34, 20, 5);
+    }
+    
+    fill(216, 230, 228);
+    arc(0, 1, 35, 35, -180, 0);
+    rect(-8, -20, 16, 10);
+    
+    fill(235, 245, 244);
+    arc(0, 1, 30, 30, -180, 0);
+    
+    fill(170, 195, 204);
+    rect(-10, -25, 20, 8, 2);
+    
+    fill(242, 242, 242);
+    rect(-20, 20, 40, 20, 3);
+    
+    fill(150);
+    rect(-15, 25, 25, 2, 5);
+    rect(-15, 30, 20, 2, 5);
+    popMatrix();
+}
+
+
+function Particle(x, y, type){
+    this.x = x;
+    this.y = y;
+    
+    this.size = 40;
+    this.decayRate = 2;
+}
+Particle.prototype.run = function(){
+    fill(255, 100);
+    ellipse(this.x, this.y, this.size, this.size);
+    this.size -= this.decayRate;
+};
+
+function shortAngleDist(a0,a1) {
+    var max = Math.PI*2;
+    var da = (a1 - a0) % max;
+    return 2*da % max - da;
+}
+
+function angleLerp(a0,a1,t) {
+    return a0 + shortAngleDist(a0,a1)*t;
+}
+
+function PlayerBottle(){
+    this.launchAngle = 0;
+    this.startY = 0;
+    this.startX = 0;
+    
+    this.yShift = -40;
+    this.body = Bodies.fromVertices(0, 0, [{x: -10, y: -50}, {x: 10, y: -50}, 
+                                        {x: -23, y: -15}, {x: 23, y: -15},
+                                        {x: 23, y: 60}, {x: -23, y: 60}]);
+    this.body.frictionAir = 0.007;
+    this.body.friction = 0.1;
+    this.body.drawType = "bottle";
+    Move.setCentre(this.body, {x: 0, y: -this.yShift-32}, true);
+    Composite.add(engine.world, this.body);
+    
+    this.released = false;
+    this.winTime = 0;
+}
+PlayerBottle.prototype = {
+    resetPosition: function(x, y){
+        this.startX = x;
+        this.startY = y;
+        this.released = false;
+    },
+    handleJump: function(){
+        if(clicked && !this.released && MouseY > 80){
+            this.released = true;
+            this.launchAngle = this.body.angle;
+            var x = cos(degrees(this.body.angle))*8;
+            var y = sin(degrees(this.body.angle))*8;
+            Move.setVelocity(this.body, {x: x, y: y});
+            Move.setAngularVelocity(this.body, -0.1);
+        }
+        if(!this.released){
+            Move.setPosition(this.body, {x: this.startX, y:this.startY,})
+            Move.setVelocity(this.body, {x: 0, y: 0});
+            Move.setAngle(this.body, angleLerp(this.body.angle, radians(atan2(MouseY - this.body.position.y, MouseX - this.body.position.x)+180), 0.2));
+            this.launchAngle = this.body.angle;
+            
+        }else{
+            
+            if(frameCount%10 === 0){
+                particles.push(new Particle(this.body.position.x, this.body.position.y));
+            }
+        }
+    },
+    draw: function(){
+        
+        if(!this.released && currentLevel === 0){
+            var x = this.startX;
+            var y = this.startY;
+            var xVel = cos(degrees(this.launchAngle))*30;
+            var yVel = sin(degrees(this.launchAngle))*25;
+            fill(50, 30);
+            for(var i = 0; i < 20; i++){
+                ellipse(x, y, 10, 10);
+                
+                x += xVel;
+                y += yVel;
+                yVel += 5;
+            }
+        }
+        
+        clearBottle(this.body.position.x, this.body.position.y, degrees(this.body.angle), this.yShift);
+    },
+}
+
+var bottle = new PlayerBottle();
+
+
+function button(x, y, type, callback){
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.callback = callback;
+    this.hover = 0;
+}
+button.prototype.run = function(){
+    switch(this.type){
+        case "reset":
+            noFill();
+            stroke(255);
+            strokeWeight(6);
+            arc(this.x, this.y, 40, 40, 30-this.hover*50, 320-this.hover*50);
+            noStroke();
+            
+            fill(255);
+            pushMatrix();
+            translate(this.x, this.y);
+            rotate(30 - this.hover*50);
+            translate(20, -12);
+            triangle(0, 0, 10, 12, -10, 12);
+            popMatrix();
+            
+            if(dist(MouseX, MouseY, this.x, this.y) < 30){
+                this.hover = lerp(this.hover, 1, 0.25);
+                mouse = "pointer";
+                if(clicked){
+                    this.callback();
+                }
+            }else{
+                this.hover = lerp(this.hover, 0, 0.25);
+            }
+        break;
+        case "menu": 
+            pushMatrix();
+            translate(this.x, this.y);
+            scale(1+this.hover);
+            fill(255);
+            rect(-18, -3, 36, 6, 3);
+            rect(-18, -3 - 12, 36, 6, 3);
+            rect(-18, -3 + 12, 36, 6, 3);
+            popMatrix();
+            
+            if(abs(MouseX - this.x) < 25 && abs(MouseY - this.y) < 25){
+                this.hover = lerp(this.hover, 0.2, 0.25);
+                mouse = "pointer";
+                if(clicked){
+                    this.callback();
+                }
+            }else{
+                this.hover = lerp(this.hover, 0, 0.25);
+            }
+        break;
+        case "play":
+            noFill();
+            stroke(0, 50);
+            strokeWeight(10);
+            ellipse(this.x, this.y+5, 120 + this.hover*10, 120 + this.hover * 10);
+            
+            stroke(255);
+            strokeWeight(8);
+            ellipse(this.x, this.y, 120 + this.hover*10, 120 + this.hover*10);
+            noStroke();
+            
+            pushMatrix();
+            translate(this.x, this.y+5);
+            scale(01+this.hover/5)
+            fill(0, 50);
+            triangle(-20,  -35, 35, 0, -20, 35);
+            fill(255);
+            translate(0, -5);
+            triangle(-20,  -35, 35, 0, -20, 35);
+            popMatrix();
+            
+            if(dist(MouseX, MouseY, this.x, this.y) < 70){
+                this.hover = lerp(this.hover, 1, 0.25);
+                mouse = "pointer";
+                if(clicked){
+                    this.callback();
+                }
+            }else{
+                this.hover = lerp(this.hover, 0, 0.25);
+            }
+        break;
+        case "exit":
+            noFill();
+            strokeWeight(6);
+            
+            stroke(0, 20);
+            line(this.x - 15*(1+this.hover), this.y-15*(1+this.hover) + 2, this.x+15*(1+this.hover), 2 + this.y+15*(1+this.hover));
+            line(this.x - 15*(1+this.hover), this.y+15*(1+this.hover) + 2, this.x+15*(1+this.hover), 2 + this.y-15*(1+this.hover));
+            stroke(255);
+            line(this.x - 15*(1+this.hover), this.y-15*(1+this.hover), this.x+15*(1+this.hover), this.y+15*(1+this.hover));
+            line(this.x - 15*(1+this.hover), this.y+15*(1+this.hover), this.x+15*(1+this.hover), this.y-15*(1+this.hover));
+            noStroke();
+            
+            
+            if(dist(MouseX, MouseY, this.x, this.y) < 30){
+                this.hover = lerp(this.hover, 0.3, 0.05);
+                mouse = "pointer";
+                if(clicked){
+                    this.callback();
+                }
+            }else{
+                this.hover = lerp(this.hover, 0, 0.25);
+            }
+        break;
+        case "lead": 
+            pushMatrix();
+            translate(this.x, this.y);
+            scale(1+this.hover);
+            fill(0, 50);
+            rect(-8, -30, 16, 60, 2);
+            rect(-28, -10, 16, 40, 2);
+            rect(12, -20, 16, 50, 2);
+            
+            translate(0, -3);
+            fill(255);
+            rect(-8, -30, 16, 60, 2);
+            rect(-28, -10, 16, 40, 2);
+            rect(12, -20, 16, 50, 2);
+            popMatrix();
+            
+            if(abs(MouseX - this.x) < 30 && abs(MouseY - this.y) < 30){
+                this.hover = lerp(this.hover, 0.2, 0.25);
+                mouse = "pointer";
+                if(clicked){
+                    this.callback();
+                }
+            }else{
+                this.hover = lerp(this.hover, 0, 0.25);
+            }
+        break;
+    }
+}
+
+
+var levelPopup = {
+    t: 0,
+    y: HEIGHT*2,
+    exit: new button(WIDTH-50, 50, "exit", function(){
+        transition.start("game");
+    }),
+    run: function(){
+        image(this.bg, 0, 0);
+        
+        fill(255, min(this.t += 5, 120));
+        rect(0, 0, WIDTH, HEIGHT);
+        
+        textSize(36);
+        textAlign(CENTER, CENTER);
+        for(var i = 0; i < levels.length; i++){
+            
+            fill(0, 30);
+            var x = (WIDTH/2 - 200) + (i%4)*100;
+            var y = this.y + (HEIGHT/2 - 150) + ~~(i/4) *100;
+            rect(x, y, 80, 80+3, 10);
+            fill(255);
+            rect(x, y, 80, 80, 10);
+            
+            if(abs((MouseX - 40) - x) < 40 && abs((MouseY - 40) - y) < 40 && i !== currentLevel){
+                mouse = "pointer";
+                if(clicked){
+                    currentLevel = i;
+                    transition.start(function(){
+                        loadLevel(currentLevel, bottle);
+                        scene = "game";
+                        levelPopup.y = HEIGHT*2;
+                        scoreModifier.decrease(5);
+                    });
+                }
+            } 
+            
+            fill(150);
+            text(i+1, x+40, y+40);
+            
+            if(currentLevel === i){
+                fill(100, 200, 150);
+                triangle(x+40, y+60, x+30, y+80, x+50, y+80);
+            }
+            this.exit.run();
+        }
+        
+        fill(255, 150, 150);
+        textSize(16);
+        text("Warning, Changing levels will result in a 5 point deduction.\nUse X to return to current level without penalty", WIDTH/2, HEIGHT-70);
+        
+        textAlign(LEFT, TOP);
+        
+        this.y = lerp(this.y, 0, 0.2);
+    }
+};
+
+function WorldObject(config){
+    this.type = config.type;
+    switch(this.type){
+        case "target":
+            this.body = Bodies.rectangle(config.x, config.y, 100, 10, {isStatic: true});
+            this.body.friction = 0.4;
+        break;
+        default:
+            this.body = Bodies.rectangle(config.x, config.y, config.w, config.h, {isStatic: true});
+            this.w = config.w;
+            this.h = config.h;
+            this.body.friction = config.friction || 0.005;
+            if(config.a){
+                Move.rotate(this.body, -radians(config.a))
+            }
+    }
+    this.move = config.move;
+    this.body.drawType = "worldObject";
+    Composite.add(engine.world, this.body);
+}
+WorldObject.prototype.draw = function(){
+    pushMatrix();
+    translate(this.body.position.x, this.body.position.y);
+    rotate(degrees(this.body.angle));
+    switch(this.type){
+        case "target":
+            drawTarget();
+        break;
+        case "grass":
+            drawGrass(this.w, this.h);
+        break;
+        case "wood":
+            fill(130, 80, 40);
+            rect(-this.w/2, -this.h/2, this.w, this.h, 3);
+            
+            fill(150, 90, 40);
+            rect(-this.w/2 +5, -this.h/2 +5, this.w - 10, this.h - 10, 3);
+        break;
+    }
+    
+    popMatrix();
+    
+};
+WorldObject.prototype.run = function(player){
+    if(this.move){
+        this.move(this.body, frameCount);
+    }
+    switch(this.type){
+        
+        case "target":
+            if(collides(this.body, player.body) != null && ((abs((degrees(player.body.angle))%180)) < 3 || (180-abs((degrees(player.body.angle))%180)) < 3)){
+                player.winTime ++;
+                
+                var angle = degrees(player.body.angle);
+                angle =  angle % 360; 
+                angle = (angle + 360) % 360;  
+                if (angle > 180){  
+                    angle -= 360;
+                }
+                angle = abs(angle);
+                
+                if(abs(angle-180) < angle){
+                    player.direction = "cap";
+                }else{
+                    player.direction = "bottom"; 
+                }
+            }else{
+                player.winTime = 0;
+            }
+        break;
+    }
+};
+
+var gameUI = [
+    new button(105, 50, "reset", function(){
+        bottle.released = false;
+        scoreModifier.decrease(1);
+    }),
+    new button(45, 50, "menu", function(){
+        filter(BLUR, 2);
+        levelPopup.bg = get();
+        scene = "levelPopup"
+    })
+];
+var play = new button(WIDTH/2, HEIGHT/2 + 80, "play", function(){
+    transition.start("game");
+});
+var leaderboard = new button(WIDTH/2 + 150, HEIGHT/2 + 150, "lead", function(){
+    transition.start("lead"); 
+});
+
+var returnToMenu = new button(WIDTH-50, 50, "exit", function(){
+    transition.start("menu");
+})
+loadLevel(currentLevel, bottle);
+
+function game(){
+    background(180, 220, 240);
+    pushMatrix();
+    translate(random(-shake, shake), random(-shake, shake));
+    shake = max(shake-2, 0);
+    drawClouds();
+    
+    var bodies = Composite.allBodies(engine.world);
+    
+    for(var i = particles.length-1; i >= 0; --i){
+        particles[i].run();
+        if(particles[i].size <= 0){
+            particles.splice(i, 1);
+        }
+    }
+    
+    bottle.handleJump();
+    
+    Engine.update(engine);
+    
+    for(var j = 0; j < objects.length; j++){
+        objects[j].draw();
+        objects[j].run(bottle);
+    }
+    
+    bottle.draw();
+    
+    fill(0);
+    var allBodies = engine.world.bodies;
+    
+    if(debug){
+        for(var i = 0; i < allBodies.length; i++){
+            var v = allBodies[i].vertices
+            beginShape();
+            for(var j = 0; j < v.length; j++){
+                vertex(v[j].x, v[j].y);
+            }
+            endShape(CLOSE);
+        }
+    }
+    
+    for(var i = 0; i < gameUI.length; i++){
+        gameUI[i].run();
+    }
+    
+    
+    if(bottle.winTime > 100){
+        transition.start(function(){
+            currentLevel ++;
+            
+            if(currentLevel < levels.length){
+                loadLevel(currentLevel, bottle);
+            }else{
+                scene = "win";
+            }
+            
+        });
+    }else if(~~bottle.winTime === 40){
+        confeti.burst();
+        scoreModifier.increase(bottle.direction == "cap" ? 10:5);
+    }
+    
+    if(keyCode === 82 && keyUp){
+        bottle.released = false;
+        scoreModifier.decrease(1);
+    }
+    
+    textSize(32);
+    text("Level "+(currentLevel+1), 150, 30);
+    
+    scoreModifier.run();
+    popMatrix();
+}
+
+function menu(){
+    background(180, 220, 240);
+    drawClouds();
+    
+    fill(200, 230, 240);
+    rect(0, 0, 300, HEIGHT);
+    
+    textAlign(CENTER, CENTER);
+    textSize(80);
+    fill(0, 50);
+    text("Bottle Flip", WIDTH/2, HEIGHT/2 - 45);
+    
+    fill(255);
+    text("Bottle Flip", WIDTH/2, HEIGHT/2 - 50);
+    textAlign(LEFT, TOP);
+    
+    clearBottle(150, 467);
+    
+    pushMatrix();
+    translate(300, 580);
+    drawGrass(WIDTH, 60);
+    popMatrix();
+    
+    play.run();
+    leaderboard.run();
+}
+function lead(){
+    background(180, 220, 240);
+    fill(200, 230, 240);
+    rect(0, 0, 300, HEIGHT);
+    
+    textAlign(CENTER, CENTER);
+    textSize(60);
+    fill(0, 50);
+    text("Leaderboard", WIDTH/2, 110);
+    
+    fill(255);
+    text("Leaderboard", WIDTH/2, 105);
+    
+    textSize(32);
+    for(var i = 0; i < leaders.length; i++){
+        fill(0, 25);
+        text(leaders[i][0] + ": " + leaders[i][1], WIDTH/2, 203+i*40);
+        fill(255);
+        text(leaders[i][0] + ": " + leaders[i][1], WIDTH/2, 200+i*40);
+    }
+    textAlign(LEFT, TOP);
+    
+    pushMatrix();
+    translate(300, 580);
+    drawGrass(WIDTH, 60);
+    popMatrix();
+
+    returnToMenu.run();
+}
+
+
+function win(){
+    background(180, 220, 240);
+    drawClouds();
+    
+    fill(200, 230, 240);
+    rect(0, 0, 300, HEIGHT);
+    
+    textAlign(CENTER, CENTER);
+    textSize(60);
+    fill(0, 50);
+    text("Game Complete!", WIDTH/2, HEIGHT/2 - 45);
+    
+    fill(255);
+    text("Game Complete!", WIDTH/2, HEIGHT/2 - 50);
+    
+    textSize(24);
+    fill(0, 50);
+    text("You did it!\nCheck back later for more levels!", WIDTH/2, HEIGHT/2+ 23);
+    fill(255);
+    text("You did it!\nCheck back later for more levels!", WIDTH/2, HEIGHT/2+ 20);
+    
+    
+    clearBottle(150, 467 - abs(sin(frameCount*5)*100), sin(frameCount*5)*10);
+    
+    
+    pushMatrix();
+    translate(300, 580);
+    drawGrass(WIDTH, 60);
+    popMatrix();
+    
+    textSize(36);
+    fill(0, 40);
+    text("Final Score: "+score, WIDTH/2, HEIGHT-197);
+    
+    fill(255);
+    text("Final Score: "+score, WIDTH/2, HEIGHT-200);
+    textAlign(LEFT, TOP);
+    
+    if(frameCount%100 === 0){
+        confeti.burst();
+    }
+}
+
+var wScale = width/WIDTH;
+var hScale = height/HEIGHT;
+
+function draw(){
+    MouseX = mouseX / wScale;
+    MouseY = mouseY / hScale;
+    pushMatrix();
+    scale(wScale, hScale)
+    switch(scene){
+        case "game":
+            game();
+        break;
+        case "levelPopup":
+            levelPopup.run();
+        break;
+        case "menu":
+            menu();
+        break;
+        case "win":
+            win();
+        break;
+        case "lead":
+            lead();
+        break;
+    }
+    confeti.run();
+    cursor(mouse);
+    mouse = "";
+    transition.run();
+    clicked = false;
+    keyUp = false;
+    popMatrix();
+}
+
+
+}catch(e){println(e);}</script>
+        <script>
+            var src = document.getElementById("pjs");
+            var size = Math.min(window.innerHeight, window.innerWidth)-50;
+            src.setAttribute("data-width", size)
+            src.setAttribute("data-height", size)
+        </script>
+        <script src="https://cdn.jsdelivr.net/gh/vExcess/library_files@main/runPJS.js"></script>
+        <script>
+            var canvas = document.querySelector("canvas")
+            canvas.style.left = (window.innerWidth/2 - size/2) + "px";
+            canvas.style.top = (window.innerHeight/2 - size/2) + "px";
+        </script>
+    </body>
+</html>
